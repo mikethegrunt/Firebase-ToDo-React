@@ -1,5 +1,5 @@
 export default {
-  apiKey: "AIzaSyBtigaAdQ51Y54G2mU4oiSkNeZy4jPdlEk",
+  apiKey: "AIzaSyD4ZS0UKV0ACammjbCTw8D9zQqHcQinP3A",
   authDomain: "todoapp-f8493.firebaseapp.com",
   databaseURL: "https://todoapp-f8493-default-rtdb.firebaseio.com",
   projectId: "todoapp-f8493",
