@@ -7,3 +7,5 @@ export default {
   messagingSenderId: "767404629695",
   appId: "1:767404629695:web:2ad8a8a7d4b613625af00a"
 };
+
+const fuckGitIgnore = 'why wont you work'

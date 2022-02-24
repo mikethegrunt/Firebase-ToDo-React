@@ -66,3 +66,4 @@ node_modules/
 .env
 
 functions/util/config/
+config.js

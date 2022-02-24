@@ -1,2 +1,3 @@
 node_modules/
-functions/util/config.js
+functions/util/config/
+config.js
