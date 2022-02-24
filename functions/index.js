@@ -6,7 +6,8 @@ import {
   deleteTodo,
   editTodo,
 } from './APIs/todos.js';
-import { loginUser, signUpUser } from './APIs/users.js';
+import { loginUser, signUpUser, uploadProfilePhoto } from './APIs/users.js';
+import { authToken } from './util/auth.js';
 
 const app = express();
 
@@ -16,6 +17,7 @@ app.delete('/todo/:todoId', deleteTodo);
 app.put('/todo/:todoId', editTodo);
 app.post('/login', loginUser);
 app.post('/signup', signUpUser);
+app.post('/user/image', authToken, uploadProfilePhoto);
 
 const api = functions.https.onRequest(app);
 

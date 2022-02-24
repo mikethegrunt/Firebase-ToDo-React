@@ -1,7 +1,12 @@
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { getStorage, ref, deleteObject, uploadBytes } from "firebase/storage";
 import { firebaseApp, db } from '../util/admin.js';
 import { validateLoginData, validateSignUpData } from '../util/validators.js';
+import * as BusBoy from 'busboy';
+import * as path from 'path';
+import * as os from 'os';
+import * as fs from 'fs';
 
 const loginUser = (request, response) => {
   const user = {
@@ -86,10 +91,10 @@ const signUpUser = (request, response) => {
     });
 };
 
-deleteImage = (imageName) => {
-  const bucket = firebaseApp.storage().bucket();
-  const path = `${imageName}`
-  return bucket.file(path).delete()
+const deleteImage = (imageName) => {
+  const bucket = getStorage();
+  const path = ref(storage, `${imageName}`);
+  return deleteObject(path)
     .then(() => {
       return
     })
@@ -98,16 +103,8 @@ deleteImage = (imageName) => {
     })
 };
 
-import * as BusBoy from 'busboy';
-import * as path from 'path';
-import * as os from 'os';
-import * as fs from 'fs';
 
 const uploadProfilePhoto = (request, response) => {
-  //   const BusBoy = require('busboy');
-  // const path = require('path');
-  // const os = require('os');
-  // const fs = require('fs');
   const busboy = new BusBoy({ headers: request.headers });
 
   let imageFileName;
@@ -125,17 +122,23 @@ const uploadProfilePhoto = (request, response) => {
   });
   deleteImage(imageFileName);
   busboy.on('finish', () => {
-    admin
-      .storage()
-      .bucket()
-      .upload(imageToBeUploaded.filePath, {
-        resumable: false,
-        metadata: {
-          metadata: {
-            contentType: imageToBeUploaded.mimetype
-          }
-        }
-      })
+    const storage = getStorage();
+    const imageRef = ref(storage, imageToBeUploaded.filePath);
+    const metadata = {
+      contentType: imageToBeUploaded.mimetype
+    };
+    uploadBytes(imageRef,)
+      // admin
+      //   .storage()
+      //   .bucket()
+      //   .upload(imageToBeUploaded.filePath, {
+      //     resumable: false,
+      //     metadata: {
+      //       metadata: {
+      //         contentType: imageToBeUploaded.mimetype
+      //       }
+      //     }
+      //   })
       .then(() => {
         const imageUrl = `https://firebasestorage.googleapis.com/v0/b/${config.storageBucket}/o/${imageFileName}?alt=media`;
         return db.doc(`/users/${request.user.username}`).update({
