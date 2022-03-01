@@ -1,12 +1,19 @@
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { getStorage, ref, deleteObject, uploadBytes } from "firebase/storage";
-import { firebaseApp, db } from '../util/admin.js';
+import { db, storage, auth } from '../util/admin.js';
 import { validateLoginData, validateSignUpData } from '../util/validators.js';
-import * as BusBoy from 'busboy';
-import * as path from 'path';
-import * as os from 'os';
-import * as fs from 'fs';
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+
+let userData;
+
+onAuthStateChanged(auth, user => {
+  if (user) {
+    userData = user
+    console.log(user.uid);
+  } else {
+    null;
+  }
+});
 
 const loginUser = (request, response) => {
   const user = {
@@ -91,69 +98,78 @@ const signUpUser = (request, response) => {
     });
 };
 
-const deleteImage = (imageName) => {
-  const bucket = getStorage();
-  const path = ref(storage, `${imageName}`);
-  return deleteObject(path)
-    .then(() => {
-      return
-    })
-    .catch((error) => {
-      return
-    })
-};
-
+// const deleteImage = (imageName) => {
+//   const path = ref(storage, `${imageName}`);
+//   return deleteObject(path)
+//     .then(() => {
+//       return
+//     })
+//     .catch(() => {
+//       return
+//     })
+// };
 
 const uploadProfilePhoto = (request, response) => {
-  const busboy = new BusBoy({ headers: request.headers });
 
-  let imageFileName;
-  let imageToBeUploaded = {};
+  const imageRef = ref(storage, 'mountains123.png');
 
-  busboy.on('file', (fieldname, file, filename, encoding, mimetype) => {
-    if (mimetype !== 'image/png' && mimetype !== 'image/jpeg') {
-      return response.status(400).json({ error: 'Wrong file type submited' });
-    }
-    const imageExtension = filename.split('.')[filename.split('.').length - 1];
-    imageFileName = `${request.user.username}.${imageExtension}`;
-    const filePath = path.join(os.tmpdir(), imageFileName);
-    imageToBeUploaded = { filePath, mimetype };
-    file.pipe(fs.createWriteStream(filePath));
-  });
-  deleteImage(imageFileName);
-  busboy.on('finish', () => {
-    const storage = getStorage();
-    const imageRef = ref(storage, imageToBeUploaded.filePath);
-    const metadata = {
-      contentType: imageToBeUploaded.mimetype
-    };
-    uploadBytes(imageRef,)
-      // admin
-      //   .storage()
-      //   .bucket()
-      //   .upload(imageToBeUploaded.filePath, {
-      //     resumable: false,
-      //     metadata: {
-      //       metadata: {
-      //         contentType: imageToBeUploaded.mimetype
-      //       }
-      //     }
-      //   })
-      .then(() => {
-        const imageUrl = `https://firebasestorage.googleapis.com/v0/b/${config.storageBucket}/o/${imageFileName}?alt=media`;
-        return db.doc(`/users/${request.user.username}`).update({
-          imageUrl
-        });
-      })
-      .then(() => {
-        return response.json({ message: 'Image uploaded successfully' });
-      })
-      .catch((error) => {
-        console.error(error);
-        return response.status(500).json({ error: error.code });
+  const metadata = {
+    contentType: 'image/png',
+  };
+
+  const uploadTask = uploadBytesResumable(imageRef, request.files[0].buffer, metadata);
+
+  uploadTask.on('state_changed',
+    (snapshot) => {
+      const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+      console.log('Upload is ' + progress + '% done');
+      switch (snapshot.state) {
+        case 'paused':
+          console.log('Upload is paused');
+          break;
+        case 'running':
+          console.log('Upload is running');
+          break;
+      }
+    },
+    (error) => {
+      switch (error.code) {
+        case 'storage/unauthorized':
+          break;
+        case 'storage/canceled':
+          break;
+        case 'storage/unknown':
+          break;
+      }
+    },
+    () => {
+      getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+        console.log('File available at', downloadURL);
       });
-  });
-  busboy.end(request.rawBody);
+    }
+  );
+  response.send();
 };
 
-export { loginUser, signUpUser };
+const getUserDetail = (request, response) => {
+  const userUid = userData.uid;
+  // const auth = getAuth();
+  // const user = auth.user.getIdToken();
+  console.log(userUid)
+  // const usernameRef = doc(db, 'users', request.user.username)
+  // getDoc(usernameRef)
+  //   .then((doc) => {
+  //     if (doc.exists) {
+  //       userData.userCredentials = doc.data();
+  //       return response.json(userData);
+  //     }
+  //   })
+  //   .catch((error) => {
+  //     console.error(error);
+  //     return response.status(500).json({ error: error.code });
+  //   });
+  response.send();
+};
+
+
+export { loginUser, signUpUser, getUserDetail, uploadProfilePhoto };
